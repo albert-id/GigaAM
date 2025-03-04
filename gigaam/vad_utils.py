@@ -93,7 +93,7 @@ def segment_audio(
     boundaries: List[Tuple[float, float]] = []
 
     # Concat segments from pipeline into chunks for asr according to max/min duration
-    for segment in sad_segments.get_timeline().support():
+    for segment in sad_segments:
         start = max(0, segment.start)
         end = min(len(audio) / 1000, segment.end)
 
