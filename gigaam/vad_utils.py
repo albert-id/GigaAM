@@ -5,9 +5,10 @@ from typing import List, Tuple, Union
 import torch
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
+from silero_vad import load_silero_vad, get_speech_timestamps
 
 _PIPELINE = None
-
+_SILERO_MODEL = None
 
 def get_pipeline(device: Union[str, torch.device]) -> Pipeline:
     """
@@ -29,6 +30,18 @@ def get_pipeline(device: Union[str, torch.device]) -> Pipeline:
     )
 
     return _PIPELINE.to(device)
+
+def get_silero_vad(device: Union[str, torch.device]):
+    """
+    Retrieves a SileroVAD model and moves it to the specified device.
+    """
+    global _SILERO_MODEL
+
+    if _SILERO_MODEL is None:
+        _SILERO_MODEL = load_silero_vad()
+
+    return _SILERO_MODEL.to(device)
+
 
 
 def audiosegment_to_tensor(audiosegment: AudioSegment) -> torch.Tensor:
@@ -62,17 +75,20 @@ def segment_audio(
         sample_width=wav_tensor.dtype.itemsize,
         channels=1,
     )
-    audio_bytes = BytesIO()
-    audio.export(audio_bytes, format="wav")
-    audio_bytes.seek(0)
 
-    # Process audio with pipeline to obtain segments with speech activity
-    pipeline = get_pipeline(device)
-    sad_segments = pipeline({"uri": "filename", "audio": audio_bytes})
+    # Process audio with Silero VAD to obtain segments with speech activity
+    silero_model = get_silero_vad(device)
+
+    sad_segments = get_speech_timestamps(
+        wav_tensor.to(device),
+        model=silero_model,
+        sampling_rate=sample_rate,
+        return_seconds=True,
+    )
 
     segments: List[torch.Tensor] = []
     curr_duration = 0.0
-    curr_start = 0.0
+    curr_start = -1.0
     curr_end = 0.0
     boundaries: List[Tuple[float, float]] = []
 
@@ -80,6 +96,11 @@ def segment_audio(
     for segment in sad_segments.get_timeline().support():
         start = max(0, segment.start)
         end = min(len(audio) / 1000, segment.end)
+
+        if int(curr_start) == -1:
+            curr_start, curr_end, curr_duration = start, end, end - start
+            continue
+
         if (
             curr_duration > min_duration and start - curr_end > new_chunk_threshold
         ) or (curr_duration + (end - curr_end) > max_duration):
