@@ -94,8 +94,8 @@ def segment_audio(
 
     # Concat segments from pipeline into chunks for asr according to max/min duration
     for segment in sad_segments:
-        start = max(0, segment.start)
-        end = min(len(audio) / 1000, segment.end)
+        start = max(0, segment["start"])
+        end = min(len(audio) / 1000, segment["end"])
 
         if int(curr_start) == -1:
             curr_start, curr_end, curr_duration = start, end, end - start
