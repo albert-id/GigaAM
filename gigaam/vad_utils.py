@@ -1,11 +1,23 @@
 import os
 from io import BytesIO
 from typing import List, Tuple, Union
+import threading
 
 import torch
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 from silero_vad import load_silero_vad, get_speech_timestamps
+
+def critical_section(func):
+    """
+    Decorator that ensures only one thread can execute a function at a time.
+    """
+    lock = threading.Lock()
+    
+    def wrapper(*args, **kwargs):
+        with lock:
+            return func(*args, **kwargs)
+    return wrapper
 
 _PIPELINE = None
 _SILERO_MODEL = None
@@ -56,6 +68,7 @@ def audiosegment_to_tensor(audiosegment: AudioSegment) -> torch.Tensor:
     return samples
 
 
+@critical_section
 def segment_audio(
     wav_tensor: torch.Tensor,
     sample_rate: int,
