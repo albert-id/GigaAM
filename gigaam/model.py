@@ -1,3 +1,4 @@
+import threading
 from typing import Dict, List, Tuple, Union
 
 import hydra
@@ -150,9 +151,15 @@ class GigaAMASR(GigaAM):
 
         transcribed_segments = []
         wav = load_audio(wav_file, return_format="int")
-        segments, boundaries = segment_audio(
-            wav, SAMPLE_RATE, device=self._device, **kwargs
-        )
+
+        critical_section_lock = threading.Lock()
+
+        segments, boundaries = None, None
+        with critical_section_lock:
+            segments, boundaries = segment_audio(
+                wav, SAMPLE_RATE, device=self._device, **kwargs
+            )
+
         for segment, segment_boundaries in zip(segments, boundaries):
             wav = segment.to(self._device).unsqueeze(0).to(self._dtype)
             length = torch.full([1], wav.shape[-1], device=self._device)
