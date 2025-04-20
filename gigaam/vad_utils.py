@@ -80,6 +80,13 @@ def segment_audio(
     for segment in sad_segments.get_timeline().support():
         start = max(0, segment.start)
         end = min(len(audio) / 1000, segment.end)
+
+	# Splitting long segments, when pyannote returns it
+        while end - start > max_duration:
+            segments.append(audiosegment_to_tensor(audio[int(start * 1000):int((start + max_duration) * 1000)]))
+            boundaries.append((start, start + max_duration))
+            start += max_duration
+
         if (
             curr_duration > min_duration and start - curr_end > new_chunk_threshold
         ) or (curr_duration + (end - curr_end) > max_duration):
