@@ -47,7 +47,7 @@ def segment_audio(
     wav_tensor: torch.Tensor,
     sample_rate: int,
     max_duration: float = 22.0,
-    min_duration: float = 15.0,
+    min_duration: float = 10.0,
     new_chunk_threshold: float = 0.2,
     device: Union[str, torch.device] = "cpu",
 ) -> Tuple[List[torch.Tensor], List[Tuple[float, float]]]:
