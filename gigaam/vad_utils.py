@@ -17,7 +17,7 @@ def get_pipeline(device: Union[str, torch.device]) -> Pipeline:
     """
     global _PIPELINE
     if _PIPELINE is not None:
-        return _PIPELINE.to(device)
+        return _PIPELINE
 
     try:
         hf_token = os.environ["HF_TOKEN"]
@@ -26,9 +26,9 @@ def get_pipeline(device: Union[str, torch.device]) -> Pipeline:
 
     _PIPELINE = Pipeline.from_pretrained(
         "pyannote/voice-activity-detection", use_auth_token=hf_token
-    )
+    ).to(device)
 
-    return _PIPELINE.to(device)
+    return _PIPELINE
 
 
 def audiosegment_to_tensor(audiosegment: AudioSegment) -> torch.Tensor:
